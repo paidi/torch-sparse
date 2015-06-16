@@ -1,8 +1,10 @@
+-- Implements a Sparse Tensor in CSC format
 local SparseTensor = torch.class('torch.SparseTensor')
 
-function SparseTensor:__init(data, offsets)
+function SparseTensor:__init(data, offsets, shape)
    self.data = data or torch.Tensor()
    self.offsets = offsets
+   self.shape = shape
    self.isSparse = true
 end
 
@@ -11,23 +13,23 @@ function SparseTensor:clone()
 end
 
 function SparseTensor:nDimension()
-   if self.offsets:size() > 1 then
-      return 2
-   else
-      return 1
-   end
+   return 2
 end
 
 function SparseTensor:dim()
    return self:nDimension()
 end
 
-function SparseTensor:nElement()
+function SparseTensor:numNonzero()
    return self.data:size(2)
 end
 
+function SparseTensor:numElement()
+   return self.shape[1]*self.shape[2]
+end
+
 function SparseTensor:size()
-   assert(false, "not implemented")
+   return self.shape
 end
 
 function SparseTensor:copy(other)
@@ -43,10 +45,8 @@ function SparseTensor:zero()
 end
 
 function SparseTensor:narrow(dim, index, size)
-   assert(dim == 1, 'select only implemented for first dimension')
+   assert(dim == 1, 'only implemented for first dimension')
    assert(index < self.offsets:size(), 'index out of bounds')
-   assert(self.offsets:size() > 1,
-          'select only implemented for matrices')
    local startIdx = self.offsets[index]
    local endIdx = index+size-1 == self.offsets:size() and self.data:size(1)
    endIdx = endIdx or self.offsets[index+size-1]
@@ -55,9 +55,7 @@ function SparseTensor:narrow(dim, index, size)
 end
 
 function SparseTensor:select(dim, index)
-   assert(dim == 1, 'select only implemented for first dimension')
-   assert(self.offsets:size() > 1,
-          'select only implemented for matrices')
+   assert(dim == 1, 'only implemented for first dimension')
    assert(index < self.offsets:size(), 'index out of bounds')
    local startIdx = 1+self.offsets[index]
    local endIdx = index == self.offsets:size() and self.data:size(1) or self.offsets[index]
